@@ -68,7 +68,8 @@ config :ueberauth, Ueberauth,
       {Ueberauth.Strategy.Google,
        [
          default_scope: "email profile"
-       ]}
+       ]},
+    oidc: {Ueberauth.Strategy.Oidcc, [issuer: :operately_oidc]}
   ]
 
 config :ueberauth, Ueberauth.Strategy.Google.OAuth,

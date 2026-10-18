@@ -54,6 +54,35 @@ config :operately, :require_email_verification, System.get_env("REQUIRE_EMAIL_VE
 config :operately, :allow_login_with_google, System.get_env("ALLOW_LOGIN_WITH_GOOGLE", "no") == "yes"
 config :operately, :allow_signup_with_google, System.get_env("ALLOW_SIGNUP_WITH_GOOGLE", "no") == "yes"
 
+oidc_issuer_url = System.get_env("OIDC_ISSUER_URL")
+
+config :operately, :oidc_issuer_url, oidc_issuer_url
+config :operately, :oidc_client_id, System.get_env("OIDC_CLIENT_ID")
+config :operately, :oidc_provider_name, System.get_env("OIDC_PROVIDER_NAME", "SSO")
+config :operately, :allow_login_with_oidc, System.get_env("ALLOW_LOGIN_WITH_OIDC", "no") == "yes"
+config :operately, :allow_signup_with_oidc, System.get_env("ALLOW_SIGNUP_WITH_OIDC", "no") == "yes"
+config :operately, :oidc_require_verified_email, System.get_env("OIDC_REQUIRE_VERIFIED_EMAIL", "yes") != "no"
+
+# The issuer worker starts whenever an issuer is configured; whether OIDC login
+# is offered is decided at request time by Operately.Oidc.Config.enabled?/0.
+if oidc_issuer_url not in [nil, ""] do
+  config :ueberauth_oidcc, :issuers, [%{name: :operately_oidc, issuer: oidc_issuer_url}]
+
+  oidc_provider =
+    [
+      client_id: System.get_env("OIDC_CLIENT_ID"),
+      client_secret: System.get_env("OIDC_CLIENT_SECRET"),
+      scopes: ["openid", "email", "profile"],
+      userinfo: true
+    ] ++
+      case System.get_env("OPERATELY_HOST") do
+        host when host in [nil, ""] -> []
+        host -> [redirect_uri: "#{System.get_env("OPERATELY_URL_SCHEME") || "https"}://#{host}/accounts/auth/oidc/callback"]
+      end
+
+  config :ueberauth_oidcc, :providers, oidc: oidc_provider
+end
+
 config :operately, :send_onboarding_emails, System.get_env("SEND_ONBOARDING_EMAILS", "no") == "yes"
 config :operately, :sendgrid_saas_onboarding_list_id, System.get_env("SENDGRID_SAAS_ONBOARDING_LIST_ID")
 
