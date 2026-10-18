@@ -90,7 +90,10 @@ defmodule OperatelyWeb.AccountOauthController do
     end
   end
 
-  def callback(%{assigns: %{ueberauth_failure: _}} = conn, %{"provider" => "oidc"}), do: sso_error(conn, "failed")
+  def callback(%{assigns: %{ueberauth_failure: failure}} = conn, %{"provider" => "oidc"}) do
+    Logger.warning("OIDC callback failed: #{inspect(Enum.map(failure.errors, &{&1.message_key, &1.message}))}")
+    sso_error(conn, "failed")
+  end
 
   def callback(conn, _params) do
     conn
