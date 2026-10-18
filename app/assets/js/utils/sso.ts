@@ -9,6 +9,12 @@ export function isSsoOnly(): boolean {
   return Boolean(window.appConfig.ssoOnly) && window.appConfig.configured !== false;
 }
 
+// On /log_in, auto-start SSO only for anonymous visitors with no pending SSO error
+// (mirrors the Elixir plug, which skips logged-in accounts).
+export function shouldAutoStartSso(ssoError: string | null): boolean {
+  return isSsoOnly() && !ssoError && !window.appConfig.account?.id;
+}
+
 export function oidcAuthUrl({
   redirectTo,
   inviteToken,

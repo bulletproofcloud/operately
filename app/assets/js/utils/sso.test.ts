@@ -1,4 +1,4 @@
-import { isSsoOnly, oidcAuthUrl, ssoErrorMessage, startSsoLogin } from "./sso";
+import { isSsoOnly, oidcAuthUrl, shouldAutoStartSso, ssoErrorMessage, startSsoLogin } from "./sso";
 
 function stubWindow(appConfig: Partial<AppConfig>, search = "", pathname = "/") {
   Object.defineProperty(global, "window", {
@@ -67,6 +67,30 @@ describe("startSsoLogin", () => {
   it("navigates the whole page to the provider", () => {
     stubWindow({ ssoOnly: true }, "?invite_token=tok");
     startSsoLogin("/c/goals");
-    expect(window.location.assign).toHaveBeenCalledWith("/accounts/auth/oidc?redirect_to=%2Fc%2Fgoals&invite_token=tok");
+    expect(window.location.assign).toHaveBeenCalledWith(
+      "/accounts/auth/oidc?redirect_to=%2Fc%2Fgoals&invite_token=tok",
+    );
+  });
+});
+
+describe("shouldAutoStartSso", () => {
+  it("is true for anonymous visitors in SSO-only mode without an error", () => {
+    stubWindow({ ssoOnly: true });
+    expect(shouldAutoStartSso(null)).toBe(true);
+  });
+
+  it("is false when there is an SSO error", () => {
+    stubWindow({ ssoOnly: true });
+    expect(shouldAutoStartSso("failed")).toBe(false);
+  });
+
+  it("is false for a logged-in account", () => {
+    stubWindow({ ssoOnly: true, account: { id: "acc" } } as any);
+    expect(shouldAutoStartSso(null)).toBe(false);
+  });
+
+  it("is false when not SSO-only", () => {
+    stubWindow({ ssoOnly: false });
+    expect(shouldAutoStartSso(null)).toBe(false);
   });
 });

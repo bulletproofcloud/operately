@@ -8,7 +8,7 @@ import { OperatelyLogo } from "@/components/OperatelyLogo";
 
 import { SignInWithGoogleButton, SignInWithOidcButton } from "@/features/auth/Buttons";
 import { logIn } from "@/routes/auth";
-import { isSsoOnly, ssoErrorMessage, startSsoLogin } from "@/utils/sso";
+import { shouldAutoStartSso, ssoErrorMessage, startSsoLogin } from "@/utils/sso";
 import { Paths } from "@/routes/paths";
 import { PageModule } from "@/routes/types";
 import classNames from "classnames";
@@ -23,7 +23,7 @@ function Page() {
   const ssoError = React.useMemo(() => new URLSearchParams(window.location.search).get("sso_error"), []);
 
   React.useEffect(() => {
-    if (isSsoOnly() && !ssoError) startSsoLogin(redirectTo);
+    if (shouldAutoStartSso(ssoError)) startSsoLogin(redirectTo);
   }, []);
 
   const form = Forms.useForm({
