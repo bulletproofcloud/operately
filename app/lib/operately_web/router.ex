@@ -61,6 +61,7 @@ defmodule OperatelyWeb.Router do
     if Application.compile_env(:operately, :test_routes) do
       get("/accounts/auth/test_login", AccountSessionController, :test_login)
       get("/accounts/auth/test_google", AccountOauthController, :test_google)
+      get("/accounts/auth/test_oidc", AccountOauthController, :test_oidc)
     end
   end
 

@@ -7,9 +7,11 @@ defmodule OperatelyWeb.AccountOauthController do
   alias Operately.People.CliAuthSession
   alias Operately.InviteLinks
   alias Operately.Companies
+  alias Operately.Oidc
   alias OperatelyWeb.AccountAuth
   alias OperatelyWeb.Paths
 
+  plug :require_oidc_enabled when action in [:request, :callback]
   plug :store_redirect_in_state when action == :request
   plug Ueberauth
 
@@ -24,6 +26,22 @@ defmodule OperatelyWeb.AccountOauthController do
     |> maybe_store_redirect(conn.params["redirect_to"])
     |> maybe_store_invite_token(conn.params["invite_token"])
   end
+
+  def require_oidc_enabled(%{params: %{"provider" => "oidc"}} = conn, _opts) do
+    cond do
+      not Oidc.Config.enabled?() ->
+        conn |> redirect(to: "/log_in?sso_error=not_configured") |> halt()
+
+      Process.whereis(Oidc.Config.issuer()) == nil ->
+        Logger.warning("OIDC provider configuration worker is not running")
+        conn |> redirect(to: "/log_in?sso_error=failed") |> halt()
+
+      true ->
+        conn
+    end
+  end
+
+  def require_oidc_enabled(conn, _opts), do: conn
 
   @doc """
   Handles the callback from Google OAuth authentication.
@@ -65,11 +83,77 @@ defmodule OperatelyWeb.AccountOauthController do
     end
   end
 
+  def callback(%{assigns: %{ueberauth_auth: %Ueberauth.Auth{} = auth}} = conn, %{"provider" => "oidc"} = params) do
+    case Oidc.Identity.from_ueberauth(auth) do
+      {:ok, identity} -> handle_oidc_identity(conn, identity, params)
+      {:error, _} -> sso_error(conn, "failed")
+    end
+  end
+
+  def callback(%{assigns: %{ueberauth_failure: _}} = conn, %{"provider" => "oidc"}), do: sso_error(conn, "failed")
+
   def callback(conn, _params) do
     conn
     |> put_flash(:error, "Authentication failed")
     |> redirect(to: "/")
   end
+
+  defp handle_oidc_identity(conn, identity, params) do
+    {conn, redirect_params} = get_and_clear_redirect_params(conn, params)
+    {conn, invite_token} = get_and_clear_invite_token(conn, params)
+
+    case Oidc.FetchOrLinkAccountOperation.call(identity, invite?: valid_invite?(invite_token, identity)) do
+      {:ok, account, source} ->
+        account_source = if source == :created, do: :created, else: :existing
+        {conn, cli_auth_session_id} = get_and_clear_cli_auth_session_id(conn, params)
+
+        if cli_auth_session_id do
+          complete_cli_auth_without_browser_login(conn, account, invite_token, cli_auth_session_id, redirect_params, account_source)
+        else
+          {redirect_params, conn} = maybe_handle_invite(conn, account, invite_token, redirect_params)
+
+          conn
+          |> AccountAuth.log_in_account(account, Map.put(redirect_params, "remember_me", "true"))
+          |> maybe_store_id_token(identity.id_token)
+        end
+
+      {:error, :email_not_verified} ->
+        sso_error(conn, "email_not_verified")
+
+      {:error, :no_account} ->
+        sso_error(conn, "no_account")
+
+      {:error, reason} ->
+        Logger.error("OIDC login failed: #{inspect(reason)}")
+        sso_error(conn, "failed")
+    end
+  end
+
+  # Account creation is unlocked only by a usable company-wide invite link
+  # (active, and the email domain is allowed). Personal links belong to an
+  # existing person/account, so they never justify creating a new account.
+  defp valid_invite?(nil, _identity), do: false
+
+  defp valid_invite?(invite_token, identity) do
+    with {:ok, link} <- InviteLinks.get_invite_link_by_token(invite_token),
+         true <- link.type == :company_wide,
+         {:ok, _} <- InviteLinks.validate_invite_link(link, %{email: identity.email}) do
+      true
+    else
+      _ -> false
+    end
+  end
+
+  # log_in_account renews the session, so the token is stored after it.
+  # Tokens too large for the cookie are skipped (logout then stays local).
+  @max_id_token_bytes 2048
+
+  defp maybe_store_id_token(conn, id_token) when is_binary(id_token) and byte_size(id_token) <= @max_id_token_bytes,
+    do: put_session(conn, :oidc_id_token, id_token)
+
+  defp maybe_store_id_token(conn, _), do: conn
+
+  defp sso_error(conn, code), do: redirect(conn, to: "/log_in?sso_error=" <> code)
 
   defp get_and_clear_redirect_params(conn, params) do
     redirect_to = get_session(conn, :oauth_redirect_to)
@@ -162,6 +246,22 @@ defmodule OperatelyWeb.AccountOauthController do
   defp normalize_invite_token(token), do: token
 
   if Application.compile_env(:operately, :test_routes) do
+    def test_oidc(conn, params) do
+      verify_application_env()
+
+      identity = %Oidc.Identity{
+        issuer: params["iss"],
+        subject: params["sub"],
+        email: params["email"],
+        email_verified: params["email_verified"] in [true, "true"],
+        name: params["name"],
+        picture: params["picture"],
+        id_token: params["id_token"]
+      }
+
+      handle_oidc_identity(conn, identity, params)
+    end
+
     def test_google(conn, params) do
       verify_application_env()
 
