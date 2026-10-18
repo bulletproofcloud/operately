@@ -1,18 +1,25 @@
 #!/usr/bin/env bash
 # Run Operately test files on GitHub Actions for the current branch.
-# Usage: scripts/bpcs-ci [--lock] FILE...   (FILE relative to app/)
+# Usage: scripts/bpcs-ci [--lock] [--e2e] FILE...   (FILE relative to app/)
 set -euo pipefail
 
 lock=false
-if [[ "${1:-}" == "--lock" ]]; then lock=true; shift; fi
-[[ $# -gt 0 ]] || { echo "usage: $0 [--lock] FILE..." >&2; exit 2; }
+e2e=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --lock) lock=true; shift ;;
+    --e2e) e2e=true; shift ;;
+    *) break ;;
+  esac
+done
+[[ $# -gt 0 ]] || { echo "usage: $0 [--lock] [--e2e] FILE..." >&2; exit 2; }
 
 branch=$(git rev-parse --abbrev-ref HEAD)
 git push -q origin "$branch"
 
 sha=$(git rev-parse HEAD)
 start=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-gh workflow run bpcs-test.yml --ref "$branch" -f files="$*" -f update_lock="$lock"
+gh workflow run bpcs-test.yml --ref "$branch" -f files="$*" -f update_lock="$lock" -f oidc_e2e="$e2e"
 
 id=""
 for _ in $(seq 1 45); do

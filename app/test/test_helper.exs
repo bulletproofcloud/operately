@@ -11,4 +11,4 @@ if report_file = System.get_env("JUNIT_REPORT_FILE") do
 end
 
 ExUnit.configure(formatters: [JUnitFormatter, CustomFormatter])
-ExUnit.start([])
+ExUnit.start(exclude: [:oidc_e2e])

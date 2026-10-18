@@ -10,6 +10,10 @@ on:
         description: "Run mix deps.get and upload app/mix.lock"
         type: boolean
         default: false
+      oidc_e2e:
+        description: "Start the mock OIDC provider"
+        type: boolean
+        default: false
 
 jobs:
   test:
@@ -17,6 +21,7 @@ jobs:
     timeout-minutes: 90
     env:
       CI: "true"
+      COMPOSE_FILE: ${{ inputs.oidc_e2e && 'docker-compose.yml:docker-compose.bpcs-oidc.yml' || 'docker-compose.yml' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -60,6 +65,10 @@ jobs:
             make test FILE="$f" || exit 1
             echo "::endgroup::"
           done
+
+      - name: Run OIDC end-to-end tests
+        if: ${{ inputs.oidc_e2e }}
+        run: ./devenv bash -c "cd app && mix test test/features/oidc_login_test.exs --include oidc_e2e"
 
       - uses: actions/upload-artifact@v4
         if: failure()

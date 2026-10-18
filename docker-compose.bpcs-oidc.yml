@@ -1,0 +1,18 @@
+services:
+  oidc:
+    image: ghcr.io/navikt/mock-oauth2-server:6.1.2@sha256:94d4ebf0fe793a727b3468b846e92ccbcd513f3b359a095802d817934d762e01
+    environment:
+      SERVER_PORT: "8080"
+      JSON_CONFIG: >-
+        {"interactiveLogin": false,
+         "tokenCallbacks": [{"issuerId": "default", "tokenExpiry": 300,
+           "requestMappings": [{"requestParam": "client_id", "match": "*",
+             "claims": {"sub": "e2e-user", "email": "e2e@example.localhost", "email_verified": true,
+                        "name": "E2E User", "aud": ["operately-e2e"]}}]}]}
+    profiles: ["ci", "dev"]
+
+  app:
+    environment:
+      - OIDC_ISSUER_URL=http://oidc:8080/default
+      - OIDC_CLIENT_ID=operately-e2e
+      - OIDC_CLIENT_SECRET=e2e-secret
