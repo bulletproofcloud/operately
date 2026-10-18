@@ -43,6 +43,13 @@ defmodule OperatelyWeb.AccountOauthController do
 
   def require_oidc_enabled(conn, _opts), do: conn
 
+  # Ueberauth redirects to the provider itself; this action runs only when the
+  # strategy could not build that redirect (for example, no provider configuration).
+  def request(%{assigns: %{ueberauth_failure: failure}} = conn, %{"provider" => "oidc"}) do
+    Logger.warning("OIDC login request failed: #{inspect(Enum.map(failure.errors, &{&1.message_key, &1.message}))}")
+    sso_error(conn, "failed")
+  end
+
   @doc """
   Handles the callback from Google OAuth authentication.
 
