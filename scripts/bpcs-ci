@@ -10,16 +10,27 @@ if [[ "${1:-}" == "--lock" ]]; then lock=true; shift; fi
 branch=$(git rev-parse --abbrev-ref HEAD)
 git push -q origin "$branch"
 
-before=$(gh run list --workflow bpcs-test.yml --branch "$branch" --limit 1 --json databaseId -q '.[0].databaseId // 0')
+sha=$(git rev-parse HEAD)
+start=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 gh workflow run bpcs-test.yml --ref "$branch" -f files="$*" -f update_lock="$lock"
 
-for _ in $(seq 1 30); do
-  id=$(gh run list --workflow bpcs-test.yml --branch "$branch" --limit 1 --json databaseId -q '.[0].databaseId // 0')
-  [[ "$id" != "$before" ]] && break
+id=""
+for _ in $(seq 1 45); do
+  id=$(gh run list --workflow bpcs-test.yml --branch "$branch" --event workflow_dispatch --limit 20 \
+    --json databaseId,headSha,createdAt \
+    -q "[.[] | select(.headSha == \"$sha\" and .createdAt >= \"$start\")] | sort_by(.createdAt) | last | .databaseId // empty")
+  [[ -n "$id" ]] && break
   sleep 2
 done
+[[ -n "$id" ]] || { echo "no new run detected" >&2; exit 3; }
+echo "run $id: https://github.com/$(gh repo view --json nameWithOwner -q .nameWithOwner)/actions/runs/$id" >&2
 
 gh run watch "$id" --exit-status --interval 30 >/dev/null && status=0 || status=$?
 gh run view "$id" --log | grep -E "tests?, [0-9]+ failures?|[0-9]+ failed,|Tests:|FAIL |FAILED|✕|\*\* \(" | tail -20 || true
-if $lock; then gh run download "$id" -n mix-lock -D /tmp/bpcs-mix-lock && cp /tmp/bpcs-mix-lock/mix.lock app/mix.lock; fi
+if $lock; then
+  tmp=$(mktemp -d)
+  gh run download "$id" -n mix-lock -D "$tmp" || { echo "could not download mix-lock artifact" >&2; exit 4; }
+  cp "$tmp/mix.lock" app/mix.lock || { echo "could not copy mix.lock" >&2; exit 4; }
+  rm -rf "$tmp"
+fi
 exit "$status"
