@@ -17,6 +17,12 @@ defmodule Operately.Features.OidcLoginTest do
     token_endpoint_auth_method: "none"
   }
 
+  # The issuer worker loads the provider's discovery document after boot.
+  setup_all do
+    wait_for_provider_configuration(60)
+    :ok
+  end
+
   setup ctx do
     keys = [:allow_login_with_oidc, :allow_login_with_email, :allow_login_with_google, :allow_signup_with_oidc]
     saved = Enum.map(keys, &{&1, Application.get_env(:operately, &1)})
@@ -134,6 +140,19 @@ defmodule Operately.Features.OidcLoginTest do
     |> UI.assert_text("Example MCP Client")
     |> UI.assert_text("E2E Company")
     |> UI.assert_page("/oauth/authorize")
+  end
+
+  defp wait_for_provider_configuration(0), do: flunk("the OIDC issuer worker never loaded the provider configuration")
+
+  defp wait_for_provider_configuration(attempts) do
+    case :oidcc_provider_configuration_worker.get_provider_configuration(Oidc.Config.issuer()) do
+      :undefined ->
+        Process.sleep(1000)
+        wait_for_provider_configuration(attempts - 1)
+
+      _configuration ->
+        :ok
+    end
   end
 
   # A real id_token from the mock provider, through the authorization code flow.
