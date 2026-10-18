@@ -26,8 +26,14 @@ defmodule Operately.Oidc.IdentityTest do
     assert identity.picture == "https://p/x.png"
   end
 
-  test "email_verified accepts the string true only" do
-    for {value, expected} <- [{"true", true}, {"false", false}, {nil, false}, {false, false}] do
+  test "userinfo cannot override the id_token issuer and subject" do
+    {:ok, identity} = Identity.from_ueberauth(auth(@base, %{"iss" => "https://evil/", "sub" => "other"}))
+    assert identity.issuer == "https://idp/"
+    assert identity.subject == "abc"
+  end
+
+  test "email_verified is true only for true or \"true\"" do
+    for {value, expected} <- [{true, true}, {"true", true}, {"false", false}, {nil, false}, {false, false}] do
       {:ok, identity} = Identity.from_ueberauth(auth(Map.put(@base, "email_verified", value)))
       assert identity.email_verified == expected, "#{inspect(value)}"
     end

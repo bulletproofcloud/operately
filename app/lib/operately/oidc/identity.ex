@@ -7,15 +7,18 @@ defmodule Operately.Oidc.Identity do
 
   def from_ueberauth(%Ueberauth.Auth{} = auth) do
     raw = auth.extra && auth.extra.raw_info
-    claims = Map.merge((raw && raw.claims) || %{}, (raw && raw.userinfo) || %{})
+    claims = (raw && raw.claims) || %{}
+    userinfo = (raw && raw.userinfo) || %{}
+    # issuer and subject come only from the validated id_token; userinfo may not override them
+    profile = Map.merge(claims, Map.drop(userinfo, ["iss", "sub"]))
 
     identity = %__MODULE__{
       issuer: claims["iss"],
       subject: claims["sub"],
-      email: claims["email"],
-      email_verified: claims["email_verified"] in [true, "true"],
-      name: claims["name"],
-      picture: claims["picture"],
+      email: profile["email"],
+      email_verified: profile["email_verified"] in [true, "true"],
+      name: profile["name"],
+      picture: profile["picture"],
       id_token: auth.credentials && auth.credentials.other[:id_token]
     }
 
