@@ -29,6 +29,28 @@ defmodule OperatelyWeb.PageControllerTest do
     assert conn.resp_body =~ ~s("configured":true)
   end
 
+  describe "OIDC app config" do
+    setup do
+      keys = [:allow_login_with_oidc, :oidc_issuer_url, :allow_login_with_email, :allow_login_with_google, :oidc_provider_name]
+      saved = Enum.map(keys, &{&1, Application.get_env(:operately, &1)})
+      on_exit(fn -> Enum.each(saved, fn {k, v} -> Application.put_env(:operately, k, v) end) end)
+      :ok
+    end
+
+    test "exposes OIDC flags", %{conn: conn} do
+      Application.put_env(:operately, :allow_login_with_oidc, true)
+      Application.put_env(:operately, :oidc_issuer_url, "https://idp.example.localhost/app/")
+      Application.put_env(:operately, :allow_login_with_email, true)
+      Application.put_env(:operately, :oidc_provider_name, "Authentik")
+
+      html = conn |> get("/log_in") |> html_response(200)
+
+      assert html =~ ~s("allowLoginWithOidc":true)
+      assert html =~ ~s("oidcProviderName":"Authentik")
+      assert html =~ ~s("ssoOnly":false)
+    end
+  end
+
   describe "vite_dev_url/0" do
     setup do
       original_dev_host = System.get_env("OPERATELY_DEV_HOST")
