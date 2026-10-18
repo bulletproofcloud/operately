@@ -51,6 +51,7 @@ import InviteLinkJoinPage from "./InviteLinkJoinPage";
 import InviteTeamPage from "./InviteTeamPage";
 import JoinPage from "./JoinPage";
 import LobbyPage from "./LobbyPage";
+import LoggedOutPage from "./LoggedOutPage";
 import LoginPage from "./LoginPage";
 import MemberTypeSelectionPage from "./MemberTypeSelectionPage";
 import MilestoneKanbanPage from "./MilestoneKanbanPage";
@@ -176,6 +177,7 @@ export default {
   InviteTeamPage,
   JoinPage,
   LobbyPage,
+  LoggedOutPage,
   LoginPage,
   MemberTypeSelectionPage,
   MilestoneKanbanPage,

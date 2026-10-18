@@ -1,10 +1,13 @@
-type LogOutResult = "success" | "failure";
+type LogOutResult = { result: "success" | "failure"; redirectUrl: string | null };
 type LogInResult = "success" | "failure";
 
 export async function logOut(): Promise<LogOutResult> {
   const res = await fetch("/accounts/log_out", { method: "DELETE", headers: autheaders() });
 
-  return res.status === 200 ? "success" : "failure";
+  if (res.status !== 200) return { result: "failure", redirectUrl: null };
+
+  const body = await res.json().catch(() => ({}));
+  return { result: "success", redirectUrl: typeof body.redirect_url === "string" ? body.redirect_url : null };
 }
 
 interface LogInOptions {

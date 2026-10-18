@@ -72,8 +72,8 @@ function Navigation({
   const handleLogOut = async () => {
     const res = await logOut();
 
-    if (res === "success") {
-      window.location.href = "/";
+    if (res.result === "success") {
+      window.location.href = res.redirectUrl ?? "/";
     }
   };
 

@@ -84,6 +84,7 @@ defmodule OperatelyWeb.AccountAuth do
   def log_out_account(conn) do
     account_token = get_session(conn, :account_token)
     account_token && People.delete_account_session_token(account_token)
+    redirect_url = Operately.Oidc.Logout.redirect_url(get_session(conn, :oidc_id_token))
 
     if live_socket_id = get_session(conn, :live_socket_id) do
       OperatelyWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
@@ -92,7 +93,7 @@ defmodule OperatelyWeb.AccountAuth do
     conn
     |> renew_session()
     |> delete_resp_cookie(@remember_me_cookie)
-    |> send_resp(200, "")
+    |> Phoenix.Controller.json(%{redirect_url: redirect_url})
   end
 
   @doc """
