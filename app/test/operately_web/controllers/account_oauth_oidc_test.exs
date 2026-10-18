@@ -89,4 +89,11 @@ defmodule OperatelyWeb.AccountOauthOidcTest do
 
     assert redirected_to(conn) == "/log_in?sso_error=failed"
   end
+
+  test "an external redirect_to is not stored during the request phase", ctx do
+    for bad <- ["https://evil.example/", "//evil.example/"] do
+      conn = get(ctx.conn, "/accounts/auth/google", %{"redirect_to" => bad})
+      assert get_session(conn, :oauth_redirect_to) == nil
+    end
+  end
 end

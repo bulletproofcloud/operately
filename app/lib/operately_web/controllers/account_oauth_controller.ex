@@ -183,11 +183,12 @@ defmodule OperatelyWeb.AccountOauthController do
     {conn, cli_auth_session_id}
   end
 
-  defp maybe_store_redirect(conn, nil), do: conn
-  defp maybe_store_redirect(conn, ""), do: conn
-
-  defp maybe_store_redirect(conn, redirect_to),
-    do: put_session(conn, :oauth_redirect_to, redirect_to)
+  defp maybe_store_redirect(conn, redirect_to) do
+    case OperatelyWeb.Plugs.SsoOnlyLoginRedirect.safe_redirect_to(redirect_to) do
+      nil -> conn
+      path -> put_session(conn, :oauth_redirect_to, path)
+    end
+  end
 
   defp maybe_store_invite_token(conn, nil), do: conn
   defp maybe_store_invite_token(conn, ""), do: conn

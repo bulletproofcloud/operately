@@ -13,6 +13,10 @@ defmodule OperatelyWeb.Router do
     plug(:fetch_current_person)
   end
 
+  pipeline :sso_only_login_redirect do
+    plug(OperatelyWeb.Plugs.SsoOnlyLoginRedirect)
+  end
+
   pipeline :api do
     plug(:accepts, ["json"])
     plug(:fetch_session)
@@ -180,7 +184,7 @@ defmodule OperatelyWeb.Router do
   end
 
   scope "/", OperatelyWeb do
-    pipe_through([:browser])
+    pipe_through([:browser, :sso_only_login_redirect])
 
     get("/*page", PageController, :index)
   end
