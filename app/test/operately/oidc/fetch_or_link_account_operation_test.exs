@@ -100,4 +100,12 @@ defmodule Operately.Oidc.FetchOrLinkAccountOperationTest do
     {:ok, _, :existing} = FetchOrLinkAccountOperation.call(identity(email: "pic@example.localhost", picture: "https://new/b.png"), [])
     assert Operately.Repo.reload!(person).avatar_url == "https://new/b.png"
   end
+
+  test "creating an account for a soft-deleted account's email returns an error and links nothing" do
+    account = account_fixture(%{email: "gone@example.localhost"})
+    account |> Ecto.Changeset.change(deleted_at: DateTime.utc_now()) |> Operately.Repo.update!()
+
+    assert {:error, _} = FetchOrLinkAccountOperation.call(identity(email: "gone@example.localhost"), invite?: true)
+    assert AccountIdentity.get_account(@iss, "sub-1") == nil
+  end
 end

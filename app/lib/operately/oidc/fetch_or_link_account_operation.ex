@@ -41,6 +41,7 @@ defmodule Operately.Oidc.FetchOrLinkAccountOperation do
            {:ok, _} <- AccountIdentity.link(account, identity.issuer, identity.subject) do
         account
       else
+        {:error, _step, reason, _changes} -> Repo.rollback(reason)
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
