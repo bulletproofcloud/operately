@@ -1,0 +1,69 @@
+name: bpcs-test
+
+on:
+  workflow_dispatch:
+    inputs:
+      files:
+        description: "Space-separated test files relative to app/ (test/... or assets/js/...)"
+        required: true
+      update_lock:
+        description: "Run mix deps.get and upload app/mix.lock"
+        type: boolean
+        default: false
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            app/deps
+            app/_build
+          key: mix-${{ hashFiles('app/mix.lock', 'app/mix.exs') }}
+          restore-keys: mix-
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            app/node_modules
+            turboui/node_modules
+          key: npm-${{ hashFiles('app/package-lock.json', 'turboui/package-lock.json') }}
+          restore-keys: npm-
+
+      - name: Fetch dependencies and update lock
+        if: ${{ inputs.update_lock }}
+        run: |
+          make test.up
+          ./devenv bash -c "cd app && MIX_ENV=test mix local.hex --force --if-missing && MIX_ENV=test mix deps.get"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.update_lock }}
+        with:
+          name: mix-lock
+          path: app/mix.lock
+
+      - name: Build test environment
+        run: make test.build
+
+      - name: Run tests
+        run: |
+          for f in ${{ inputs.files }}; do
+            echo "::group::$f"
+            make test FILE="$f" || exit 1
+            echo "::endgroup::"
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshots-and-reports
+          path: |
+            app/screenshots
+            app/testreports
+          if-no-files-found: ignore

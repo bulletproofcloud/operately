@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Run Operately test files on GitHub Actions for the current branch.
+# Usage: scripts/bpcs-ci [--lock] FILE...   (FILE relative to app/)
+set -euo pipefail
+
+lock=false
+if [[ "${1:-}" == "--lock" ]]; then lock=true; shift; fi
+[[ $# -gt 0 ]] || { echo "usage: $0 [--lock] FILE..." >&2; exit 2; }
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+git push -q origin "$branch"
+
+before=$(gh run list --workflow bpcs-test.yml --branch "$branch" --limit 1 --json databaseId -q '.[0].databaseId // 0')
+gh workflow run bpcs-test.yml --ref "$branch" -f files="$*" -f update_lock="$lock"
+
+for _ in $(seq 1 30); do
+  id=$(gh run list --workflow bpcs-test.yml --branch "$branch" --limit 1 --json databaseId -q '.[0].databaseId // 0')
+  [[ "$id" != "$before" ]] && break
+  sleep 2
+done
+
+gh run watch "$id" --exit-status --interval 30 >/dev/null && status=0 || status=$?
+gh run view "$id" --log | grep -E "tests?, [0-9]+ failures?|Tests:|FAIL |✕|error" | tail -20 || true
+if $lock; then gh run download "$id" -n mix-lock -D /tmp/bpcs-mix-lock && cp /tmp/bpcs-mix-lock/mix.lock app/mix.lock; fi
+exit "$status"
