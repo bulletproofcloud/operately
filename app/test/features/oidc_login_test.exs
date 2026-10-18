@@ -69,7 +69,7 @@ defmodule Operately.Features.OidcLoginTest do
     ctx
     |> UI.visit("/")
     |> UI.assert_page(OperatelyWeb.Paths.home_path(ctx.company))
-    |> UI.visit("/account")
+    |> UI.visit(OperatelyWeb.Paths.account_path(ctx.company))
     |> UI.click(testid: "log-out-button")
     |> UI.assert_has(testid: "logged-out-page")
     |> UI.assert_page("/logged_out")
@@ -105,7 +105,7 @@ defmodule Operately.Features.OidcLoginTest do
     ctx
     |> UI.visit("/")
     |> UI.assert_page(OperatelyWeb.Paths.home_path(ctx.company))
-    |> UI.visit("/account")
+    |> UI.visit(OperatelyWeb.Paths.account_path(ctx.company))
     |> UI.click(testid: "log-out-button")
     |> UI.assert_has(testid: "logged-out-page")
     |> UI.visit("/accounts/auth/oidc/callback?code=replayed-code&state=not-issued-by-this-session")
