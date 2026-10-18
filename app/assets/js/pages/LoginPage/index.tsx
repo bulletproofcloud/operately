@@ -6,8 +6,9 @@ import * as React from "react";
 
 import { OperatelyLogo } from "@/components/OperatelyLogo";
 
-import { SignInWithGoogleButton } from "@/features/auth/Buttons";
+import { SignInWithGoogleButton, SignInWithOidcButton } from "@/features/auth/Buttons";
 import { logIn } from "@/routes/auth";
+import { isSsoOnly, ssoErrorMessage, startSsoLogin } from "@/utils/sso";
 import { Paths } from "@/routes/paths";
 import { PageModule } from "@/routes/types";
 import classNames from "classnames";
@@ -19,6 +20,11 @@ function Page() {
   const [error, setError] = React.useState<string | null>(null);
   const inviteToken = React.useMemo(() => new URLSearchParams(window.location.search).get("invite_token"), []);
   const redirectTo = React.useMemo(() => getRedirectTo(), []);
+  const ssoError = React.useMemo(() => new URLSearchParams(window.location.search).get("sso_error"), []);
+
+  React.useEffect(() => {
+    if (isSsoOnly() && !ssoError) startSsoLogin(redirectTo);
+  }, []);
 
   const form = Forms.useForm({
     fields: {
@@ -72,8 +78,10 @@ function Page() {
             <p className="text-content-dimmed mb-8">Please enter your details to sign in</p>
 
             <Forms.Form form={form}>
+              {ssoError && <div className="text-red-600 text-sm mb-4">{ssoErrorMessage(ssoError)}</div>}
               {window.appConfig.allowLoginWithEmail && <EmailLogin form={form} error={error} />}
               {window.appConfig.allowLoginWithGoogle && <GoogleLogin />}
+              {window.appConfig.allowLoginWithOidc && <OidcLogin />}
 
               {isSignupEnabled() && (
                 <div className="mt-8 text-center text-sm font-medium">
@@ -89,7 +97,11 @@ function Page() {
 }
 
 function isSignupEnabled(): boolean {
-  return window.appConfig.allowSignupWithEmail || window.appConfig.allowSignupWithGoogle;
+  return (
+    window.appConfig.allowSignupWithEmail ||
+    window.appConfig.allowSignupWithGoogle ||
+    window.appConfig.allowSignupWithOidc
+  );
 }
 
 function EmailLogin({ form, error }: { form: FormState<{ email: string; password: string }>; error: string | null }) {
@@ -138,6 +150,17 @@ function GoogleLogin() {
     <div>
       {window.appConfig.allowLoginWithEmail && <OrSeparator />}
       <SignInWithGoogleButton />
+    </div>
+  );
+}
+
+function OidcLogin() {
+  const hasOtherMethod = window.appConfig.allowLoginWithEmail || window.appConfig.allowLoginWithGoogle;
+
+  return (
+    <div>
+      {hasOtherMethod && <OrSeparator />}
+      <SignInWithOidcButton />
     </div>
   );
 }

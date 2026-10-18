@@ -1,6 +1,7 @@
 import React from "react";
 
 import { setDevData } from "@/features/DevBar/useDevBarData";
+import { isSsoOnly, startSsoLogin } from "@/utils/sso";
 import { isUnauthorizedError, loginPath } from "@/utils/unauthorized";
 import nprogress from "nprogress";
 import { redirect } from "react-router";
@@ -75,8 +76,16 @@ function stopProgressIndicator() {
 
 function redirectToLoginIfUnauthorized(error: unknown) {
   if (isUnauthorizedError(error)) {
-    throw redirect(loginPath());
+    goToLogin();
   }
+}
+
+function goToLogin(): never {
+  if (isSsoOnly()) {
+    startSsoLogin(window.location.pathname === "/" ? null : window.location.pathname);
+  }
+
+  throw redirect(loginPath());
 }
 
 function hasHttpStatus(error: unknown, status: number): boolean {
@@ -91,6 +100,6 @@ export function checkAuth() {
 
   if (!window.appConfig.account?.id) {
     stopProgressIndicator();
-    throw redirect(loginPath());
+    goToLogin();
   }
 }

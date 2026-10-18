@@ -20,6 +20,11 @@ declare global {
     allowLoginWithGoogle: boolean;
     allowSignupWithGoogle: boolean;
 
+    allowLoginWithOidc: boolean;
+    allowSignupWithOidc: boolean;
+    oidcProviderName: string;
+    ssoOnly: boolean;
+
     version: string;
     releaseVersion?: string | null;
     sentry: SentryConfig;

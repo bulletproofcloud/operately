@@ -6,7 +6,7 @@ import { OperatelyLogo } from "@/components/OperatelyLogo";
 import { Link } from "turboui";
 
 import { TosAndPrivacyPolicy } from "@/features/auth/AgreeToTosAndPp";
-import { SignUpWithEmail, SignUpWithGoogleButton } from "@/features/auth/Buttons";
+import { SignUpWithEmail, SignUpWithGoogleButton, SignUpWithOidcButton } from "@/features/auth/Buttons";
 import { PageModule } from "@/routes/types";
 
 export default { name: "SignUpPage", loader: Pages.emptyLoader, Page } as PageModule;
@@ -24,6 +24,7 @@ function Page() {
 
             <div className="flex flex-col gap-3 mb-8">
               {window.appConfig.allowSignupWithGoogle && <SignUpWithGoogleButton />}
+              {window.appConfig.allowSignupWithOidc && <SignUpWithOidcButton />}
               {window.appConfig.allowSignupWithEmail && (
                 <SignUpWithEmail inviteToken={inviteToken} redirectTo={redirectTo} />
               )}

@@ -1,6 +1,7 @@
 import * as React from "react";
 import classNames from "classnames";
-import { DivLink, GoogleLogo, IconMail } from "turboui";
+import { oidcAuthUrl } from "@/utils/sso";
+import { DivLink, GoogleLogo, IconMail, IconShieldLock } from "turboui";
 
 export function SignUpWithEmail({
   inviteToken,
@@ -41,6 +42,35 @@ export function SignUpWithGoogleButton() {
       testId="sign-up-with-google"
     />
   );
+}
+
+export function SignInWithOidcButton() {
+  return (
+    <SignUpButton
+      title={`Sign in with ${window.appConfig.oidcProviderName || "SSO"}`}
+      link={oidcLinkFromLocation()}
+      icon={<IconShieldLock size={24} className="text-content-dimmed" />}
+      external
+      testId="sign-in-with-oidc"
+    />
+  );
+}
+
+export function SignUpWithOidcButton() {
+  return (
+    <SignUpButton
+      title={`Sign up with ${window.appConfig.oidcProviderName || "SSO"}`}
+      link={oidcLinkFromLocation()}
+      icon={<IconShieldLock size={24} className="text-content-dimmed" />}
+      external
+      testId="sign-up-with-oidc"
+    />
+  );
+}
+
+function oidcLinkFromLocation(): string {
+  const params = new URLSearchParams(window.location.search);
+  return oidcAuthUrl({ redirectTo: params.get("redirect_to"), inviteToken: params.get("invite_token") });
 }
 
 function signupEmailPath(inviteToken?: string | null, redirectTo?: string | null): string {

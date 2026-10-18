@@ -51,6 +51,8 @@ jobs:
       - name: Build test environment
         run: make test.build
 
+      - run: make test.tsc.lint
+
       - name: Run tests
         run: |
           for f in ${{ inputs.files }}; do

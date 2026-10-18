@@ -8,7 +8,7 @@ import { PageModule } from "@/routes/types";
 import * as React from "react";
 
 import { OperatelyLogo } from "@/components/OperatelyLogo";
-import { SignInWithGoogleButton } from "@/features/auth/Buttons";
+import { SignInWithGoogleButton, SignInWithOidcButton } from "@/features/auth/Buttons";
 import { logIn } from "@/routes/auth";
 import { redirect } from "react-router";
 
@@ -124,6 +124,7 @@ function Form() {
       )}
 
       {window.appConfig.allowLoginWithGoogle && <GoogleLogin />}
+      {window.appConfig.allowLoginWithOidc && <OidcLogin />}
     </Forms.Form>
   );
 }
@@ -142,6 +143,22 @@ function GoogleLogin() {
         <SignInWithGoogleButton />
         <div className="text-xs text-content-dimmed">
           * If you sign in with Google, you must use <span className="font-semibold break-all">{member.email}</span>.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OidcLogin() {
+  const { member } = Pages.useLoadedData() as LoaderResult;
+
+  return (
+    <div>
+      {(window.appConfig.allowLoginWithEmail || window.appConfig.allowLoginWithGoogle) && <OrSeparator />}
+      <div className="space-y-2">
+        <SignInWithOidcButton />
+        <div className="text-xs text-content-dimmed">
+          * Sign in with the account for <span className="font-semibold break-all">{member.email}</span>.
         </div>
       </div>
     </div>

@@ -33,6 +33,10 @@ defmodule OperatelyWeb.PageController do
       allowSignupWithGoogle: Application.get_env(:operately, :allow_signup_with_google),
       allowLoginWithEmail: Application.get_env(:operately, :allow_login_with_email),
       allowSignupWithEmail: Application.get_env(:operately, :allow_signup_with_email),
+      allowLoginWithOidc: Operately.Oidc.Config.enabled?(),
+      allowSignupWithOidc: Operately.Oidc.Config.signup_allowed?(),
+      oidcProviderName: Operately.Oidc.Config.provider_name(),
+      ssoOnly: Operately.Oidc.Config.sso_only?(),
       version: Operately.version(),
       releaseVersion: Operately.release_version(),
       sentry: %{
