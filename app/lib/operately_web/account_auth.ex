@@ -19,7 +19,7 @@ defmodule OperatelyWeb.AccountAuth do
   to avoid fixation attacks. See the renew_session
   function to customize this behaviour.
   """
-  def log_in_account(conn, account, params \\ %{}) do
+  def log_in_account(conn, account, params \\ %{}, extra_session \\ %{}) do
     People.mark_account_first_login(account)
 
     token = People.generate_account_session_token(account)
@@ -28,8 +28,13 @@ defmodule OperatelyWeb.AccountAuth do
     conn
     |> renew_session()
     |> put_token_in_session(token)
+    |> put_extra_session(extra_session)
     |> maybe_write_remember_me_cookie(token, params)
     |> redirect(to: path)
+  end
+
+  defp put_extra_session(conn, extra) do
+    Enum.reduce(extra, conn, fn {k, v}, conn -> put_session(conn, k, v) end)
   end
 
   defp maybe_write_remember_me_cookie(conn, token, %{"remember_me" => "true"}) do

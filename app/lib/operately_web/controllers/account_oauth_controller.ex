@@ -112,9 +112,12 @@ defmodule OperatelyWeb.AccountOauthController do
         else
           {redirect_params, conn} = maybe_handle_invite(conn, account, invite_token, redirect_params)
 
-          conn
-          |> AccountAuth.log_in_account(account, Map.put(redirect_params, "remember_me", "true"))
-          |> maybe_store_id_token(identity.id_token)
+          AccountAuth.log_in_account(
+            conn,
+            account,
+            Map.put(redirect_params, "remember_me", "true"),
+            id_token_session(identity.id_token)
+          )
         end
 
       {:error, :email_not_verified} ->
@@ -144,14 +147,14 @@ defmodule OperatelyWeb.AccountOauthController do
     end
   end
 
-  # log_in_account renews the session, so the token is stored after it.
+  # Passed to log_in_account, which stores it after renewing the session.
   # Tokens too large for the cookie are skipped (logout then stays local).
   @max_id_token_bytes 2048
 
-  defp maybe_store_id_token(conn, id_token) when is_binary(id_token) and byte_size(id_token) <= @max_id_token_bytes,
-    do: put_session(conn, :oidc_id_token, id_token)
+  defp id_token_session(id_token) when is_binary(id_token) and byte_size(id_token) <= @max_id_token_bytes,
+    do: %{oidc_id_token: id_token}
 
-  defp maybe_store_id_token(conn, _), do: conn
+  defp id_token_session(_), do: %{}
 
   defp sso_error(conn, code), do: redirect(conn, to: "/log_in?sso_error=" <> code)
 
