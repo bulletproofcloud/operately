@@ -162,7 +162,7 @@ defmodule OperatelyWeb.CliLoginController do
     end
 
     defp auth_route(params) do
-      if use_test_google_route?(params), do: "/accounts/auth/test_google", else: "/accounts/auth/google"
+      if use_test_google_route?(params), do: "/accounts/auth/test_google", else: sso_route(params)
     end
 
     defp use_test_google_route?(params) do
@@ -174,6 +174,17 @@ defmodule OperatelyWeb.CliLoginController do
     defp present?(_), do: true
   else
     defp maybe_add_test_google_params(query, _session_id, _params), do: query
-    defp auth_route(_params), do: "/accounts/auth/google"
+    defp auth_route(params), do: sso_route(params)
+  end
+
+  defp sso_route(params) do
+    oidc? = Operately.Oidc.Config.enabled?()
+    google? = Application.get_env(:operately, :allow_login_with_google) == true
+
+    cond do
+      params["provider"] == "oidc" and oidc? -> "/accounts/auth/oidc"
+      oidc? and not google? -> "/accounts/auth/oidc"
+      true -> "/accounts/auth/google"
+    end
   end
 end

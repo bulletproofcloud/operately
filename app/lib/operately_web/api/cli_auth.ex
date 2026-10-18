@@ -188,7 +188,7 @@ defmodule OperatelyWeb.Api.CliAuth do
     end
 
     defp check_login_allowed do
-      if Application.get_env(:operately, :allow_login_with_google) do
+      if Application.get_env(:operately, :allow_login_with_google) or Operately.Oidc.Config.enabled?() do
         {:ok, :allowed}
       else
         {:error, :forbidden}
@@ -235,7 +235,7 @@ defmodule OperatelyWeb.Api.CliAuth do
     end
 
     defp check_signup_allowed do
-      if Application.get_env(:operately, :allow_login_with_google) do
+      if Application.get_env(:operately, :allow_login_with_google) or Operately.Oidc.Config.enabled?() do
         {:ok, :allowed}
       else
         {:error, :forbidden}
