@@ -33,7 +33,11 @@ defmodule OperatelyWeb.Plugs.SsoOnlyLoginRedirect do
   def call(conn, _opts), do: conn
 
   def safe_redirect_to("/" <> rest = path) do
-    if String.starts_with?(rest, "/") or String.starts_with?(rest, "\\"), do: nil, else: path
+    cond do
+      String.starts_with?(rest, "/") -> nil
+      String.match?(path, ~r/[\x00-\x1f\x7f\\]/) -> nil
+      true -> path
+    end
   end
 
   def safe_redirect_to(_), do: nil

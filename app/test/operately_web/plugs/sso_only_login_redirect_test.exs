@@ -37,7 +37,7 @@ defmodule OperatelyWeb.Plugs.SsoOnlyLoginRedirectTest do
   end
 
   test "redirect_to that is not a same-site path is dropped" do
-    for bad <- ["https://evil.example/", "//evil.example/", "evil"] do
+    for bad <- ["https://evil.example/", "//evil.example/", "evil", "/\t/evil.example", "/\n/evil.example", "/\r/evil.example", "/\\evil.example"] do
       conn = get(build_conn(), "/log_in", %{"redirect_to" => bad})
       assert redirected_to(conn) == "/accounts/auth/oidc"
     end
@@ -47,7 +47,7 @@ defmodule OperatelyWeb.Plugs.SsoOnlyLoginRedirectTest do
     account = Operately.PeopleFixtures.account_fixture()
     conn = build_conn() |> log_in_account(account) |> get("/log_in")
 
-    refute conn.status == 302 and redirected_to(conn) =~ "/accounts/auth/oidc"
+    assert conn.status == 200
   end
 
   @tag :unconfigured
@@ -60,5 +60,9 @@ defmodule OperatelyWeb.Plugs.SsoOnlyLoginRedirectTest do
     assert SsoOnlyLoginRedirect.safe_redirect_to("/a/b") == "/a/b"
     assert SsoOnlyLoginRedirect.safe_redirect_to("//x") == nil
     assert SsoOnlyLoginRedirect.safe_redirect_to(nil) == nil
+
+    for bad <- ["/\t/evil.example", "/\n/evil.example", "/\r/evil.example", "/\\evil.example", "/a\\b"] do
+      assert SsoOnlyLoginRedirect.safe_redirect_to(bad) == nil
+    end
   end
 end
