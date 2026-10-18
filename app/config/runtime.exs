@@ -66,7 +66,18 @@ config :operately, :oidc_require_verified_email, System.get_env("OIDC_REQUIRE_VE
 # The issuer worker starts whenever an issuer is configured; whether OIDC login
 # is offered is decided at request time by Operately.Oidc.Config.enabled?/0.
 if oidc_issuer_url not in [nil, ""] do
-  config :ueberauth_oidcc, :issuers, [%{name: :operately_oidc, issuer: oidc_issuer_url}]
+  # oidcc refuses plain-http userinfo and end_session endpoints unless told otherwise.
+  # Only an http:// issuer (a local or test provider) turns that check off.
+  oidc_issuer = %{name: :operately_oidc, issuer: oidc_issuer_url}
+
+  oidc_issuer =
+    if String.starts_with?(oidc_issuer_url, "http://") do
+      Map.put(oidc_issuer, :provider_configuration_opts, %{quirks: %{allow_unsafe_http: true}})
+    else
+      oidc_issuer
+    end
+
+  config :ueberauth_oidcc, :issuers, [oidc_issuer]
 
   oidc_provider =
     [
