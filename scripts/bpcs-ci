@@ -20,6 +20,6 @@ for _ in $(seq 1 30); do
 done
 
 gh run watch "$id" --exit-status --interval 30 >/dev/null && status=0 || status=$?
-gh run view "$id" --log | grep -E "tests?, [0-9]+ failures?|Tests:|FAIL |✕|error" | tail -20 || true
+gh run view "$id" --log | grep -E "tests?, [0-9]+ failures?|[0-9]+ failed,|Tests:|FAIL |FAILED|✕|\*\* \(" | tail -20 || true
 if $lock; then gh run download "$id" -n mix-lock -D /tmp/bpcs-mix-lock && cp /tmp/bpcs-mix-lock/mix.lock app/mix.lock; fi
 exit "$status"
