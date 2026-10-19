@@ -36,7 +36,11 @@ export function ssoErrorMessage(code: string | null): string | null {
   if (!code) return null;
 
   const provider = window.appConfig.oidcProviderName || "SSO";
-  return (ERROR_MESSAGES[code] ?? ERROR_MESSAGES.failed!)(provider);
+  // `code` comes from the query string: only own keys may match, never inherited ones like __proto__.
+  const message = Object.prototype.hasOwnProperty.call(ERROR_MESSAGES, code)
+    ? ERROR_MESSAGES[code]!
+    : ERROR_MESSAGES.failed!;
+  return message(provider);
 }
 
 export function startSsoLogin(redirectTo: string | null): void {
