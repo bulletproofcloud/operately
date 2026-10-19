@@ -63,8 +63,11 @@ defmodule Operately.Features.OidcLoginTest do
     assert {:ok, _account} = Operately.People.Account.get(:system, email: "e2e@example.localhost")
   end
 
+  # Captures the logout response the browser received, to prove it was sent to
+  # the provider (which needs the id_token kept in the session at login).
   feature "logout lands on /logged_out and does not log straight back in", ctx do
     person_fixture_with_account(%{company_id: ctx.company.id, email: "e2e@example.localhost", full_name: "E2E User"})
+    capture_logout_responses()
 
     ctx
     |> UI.visit("/")
@@ -73,11 +76,22 @@ defmodule Operately.Features.OidcLoginTest do
     |> UI.click(testid: "log-out-button")
     |> UI.assert_has(testid: "logged-out-page")
     |> UI.assert_page("/logged_out")
+
+    assert_receive {:logout_response, 200, body}, 5_000
+
+    url = Jason.decode!(body)["redirect_url"]
+    provider = Oidcc.ProviderConfiguration.Worker.get_provider_configuration(Oidc.Config.issuer())
+
+    assert is_binary(url)
+    assert String.starts_with?(url, provider.end_session_endpoint)
+
+    query = url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+    assert is_binary(query["id_token_hint"]) and query["id_token_hint"] != ""
+    assert query["post_logout_redirect_uri"] == Oidc.Config.post_logout_redirect_uri()
   end
 
-  # The browser test above cannot tell a provider round-trip from the local
-  # /logged_out fallback, so this proves the URL Operately hands the browser
-  # points at the provider, then follows it in the browser.
+  # With a real id_token from the provider, the logout URL points at its
+  # end_session endpoint, and the provider sends the browser back to /logged_out.
   feature "logout goes through the provider's end_session endpoint and back", ctx do
     id_token = mock_provider_id_token()
     provider = Oidcc.ProviderConfiguration.Worker.get_provider_configuration(Oidc.Config.issuer())
@@ -140,6 +154,25 @@ defmodule Operately.Features.OidcLoginTest do
     |> UI.assert_text("Example MCP Client")
     |> UI.assert_text("E2E Company")
     |> UI.assert_page("/oauth/authorize")
+  end
+
+  defp capture_logout_responses do
+    test_pid = self()
+    handler_id = {__MODULE__, :logout_response, make_ref()}
+
+    :ok =
+      :telemetry.attach(
+        handler_id,
+        [:phoenix, :endpoint, :stop],
+        fn _event, _measurements, %{conn: conn}, _config ->
+          if conn.method == "DELETE" and conn.request_path == "/accounts/log_out" do
+            send(test_pid, {:logout_response, conn.status, IO.iodata_to_binary(conn.resp_body || "")})
+          end
+        end,
+        nil
+      )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
   end
 
   defp wait_for_provider_configuration(0), do: flunk("the OIDC issuer worker never loaded the provider configuration")
