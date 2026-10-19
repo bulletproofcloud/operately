@@ -78,7 +78,11 @@ function Page() {
             <p className="text-content-dimmed mb-8">Please enter your details to sign in</p>
 
             <Forms.Form form={form}>
-              {ssoError && <div className="text-red-600 text-sm mb-4">{ssoErrorMessage(ssoError)}</div>}
+              {ssoError && (
+                <div className="mb-4">
+                  <Forms.ErrorMessage error={ssoErrorMessage(ssoError)!} />
+                </div>
+              )}
               {window.appConfig.allowLoginWithEmail && <EmailLogin form={form} error={error} />}
               {window.appConfig.allowLoginWithGoogle && <GoogleLogin />}
               {window.appConfig.allowLoginWithOidc && <OidcLogin />}
