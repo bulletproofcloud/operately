@@ -71,7 +71,7 @@ defmodule OperatelyWeb.AccountOauthOidcTest do
   test "an unknown invite token does not bypass signup being off", ctx do
     conn = login(ctx.conn, %{"email" => "sneaky@example.localhost", "name" => "Sneaky", "invite_token" => "bogus-token"})
 
-    assert redirected_to(conn) == "/log_in?sso_error=no_account"
+    assert redirected_to(conn) == "/log_in?sso_error=no_account&invite_token=bogus-token"
     refute get_session(conn, :account_token)
     refute Operately.People.get_account_by_email("sneaky@example.localhost")
   end
