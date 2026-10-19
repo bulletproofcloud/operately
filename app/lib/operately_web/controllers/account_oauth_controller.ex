@@ -131,14 +131,14 @@ defmodule OperatelyWeb.AccountOauthController do
         end
 
       {:error, :email_not_verified} ->
-        sso_error(conn, "email_not_verified")
+        sso_error(conn, "email_not_verified", redirect_params["redirect_to"], invite_token)
 
       {:error, :no_account} ->
-        sso_error(conn, "no_account")
+        sso_error(conn, "no_account", redirect_params["redirect_to"], invite_token)
 
       {:error, reason} ->
         Logger.error("OIDC login failed: #{inspect(reason)}")
-        sso_error(conn, "failed")
+        sso_error(conn, "failed", redirect_params["redirect_to"], invite_token)
     end
   end
 
@@ -166,7 +166,21 @@ defmodule OperatelyWeb.AccountOauthController do
 
   defp id_token_session(_), do: %{}
 
-  defp sso_error(conn, code), do: redirect(conn, to: "/log_in?sso_error=" <> code)
+  defp sso_error(conn, code), do: sso_error(conn, code, nil, nil)
+
+  # Carries the pending redirect and invite token back to the login page, so a retry keeps them.
+  defp sso_error(conn, code, redirect_to, invite_token) do
+    query =
+      [
+        {"sso_error", code},
+        {"redirect_to", OperatelyWeb.Plugs.SsoOnlyLoginRedirect.safe_redirect_to(redirect_to)},
+        {"invite_token", invite_token}
+      ]
+      |> Enum.reject(fn {_k, v} -> v in [nil, ""] end)
+      |> URI.encode_query()
+
+    redirect(conn, to: "/log_in?" <> query)
+  end
 
   defp get_and_clear_redirect_params(conn, params) do
     redirect_to = get_session(conn, :oauth_redirect_to)
