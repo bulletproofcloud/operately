@@ -4,6 +4,7 @@ export { AccessLevelSummary } from "./AccessLevelSummary";
 export type { AccessLevelSummaryProps } from "./AccessLevelSummary";
 export { AssigneesField } from "./AssigneesField";
 export * from "./Avatar";
+export * from "./AuthProviderButton";
 export * from "./Button";
 export * from "./BorderedRow";
 export * from "./Chronometer";

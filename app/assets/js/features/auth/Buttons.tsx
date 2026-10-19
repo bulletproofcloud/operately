@@ -1,7 +1,6 @@
 import * as React from "react";
-import classNames from "classnames";
 import { oidcAuthUrl } from "@/utils/sso";
-import { DivLink, GoogleLogo, IconMail, IconShieldLock } from "turboui";
+import { AuthProviderButton, GoogleLogo, IconMail, IconShieldLock } from "turboui";
 
 export function SignUpWithEmail({
   inviteToken,
@@ -11,7 +10,7 @@ export function SignUpWithEmail({
   redirectTo?: string | null;
 }) {
   return (
-    <SignUpButton
+    <AuthProviderButton
       title="Sign up with email"
       link={signupEmailPath(inviteToken, redirectTo)}
       icon={<IconMail size={24} className="text-content-dimmed" />}
@@ -22,7 +21,7 @@ export function SignUpWithEmail({
 
 export function SignInWithGoogleButton() {
   return (
-    <SignUpButton
+    <AuthProviderButton
       title="Sign in with Google"
       link={getGoogleAuthUrl()}
       icon={<GoogleLogo />}
@@ -34,7 +33,7 @@ export function SignInWithGoogleButton() {
 
 export function SignUpWithGoogleButton() {
   return (
-    <SignUpButton
+    <AuthProviderButton
       title="Sign up with Google"
       link={getGoogleAuthUrl()}
       icon={<GoogleLogo />}
@@ -46,7 +45,7 @@ export function SignUpWithGoogleButton() {
 
 export function SignInWithOidcButton() {
   return (
-    <SignUpButton
+    <AuthProviderButton
       title={`Sign in with ${window.appConfig.oidcProviderName || "SSO"}`}
       link={oidcLinkFromLocation()}
       icon={<IconShieldLock size={24} className="text-content-dimmed" />}
@@ -58,7 +57,7 @@ export function SignInWithOidcButton() {
 
 export function SignUpWithOidcButton() {
   return (
-    <SignUpButton
+    <AuthProviderButton
       title={`Sign up with ${window.appConfig.oidcProviderName || "SSO"}`}
       link={oidcLinkFromLocation()}
       icon={<IconShieldLock size={24} className="text-content-dimmed" />}
@@ -91,29 +90,6 @@ function signupEmailPath(inviteToken?: string | null, redirectTo?: string | null
   } else {
     return "/sign_up/email";
   }
-}
-
-interface SignUpButtonProps {
-  title: string;
-  link: string;
-  icon: React.ReactNode;
-  external?: boolean;
-  testId?: string;
-}
-
-function SignUpButton({ title, link, icon, external, testId }: SignUpButtonProps) {
-  const className = classNames(
-    "w-full inline-flex gap-3 py-2.5 px-4",
-    "bg-surface-base rounded-md shadow font-semibold",
-    "hover:bg-surface-dimmed border border-surface-outline",
-  );
-
-  return (
-    <DivLink to={link} className={className} data-test-id={testId} external={external}>
-      {icon}
-      <div className="text-center w-10/12">{title}</div>
-    </DivLink>
-  );
 }
 
 function getGoogleAuthUrl(): string {
