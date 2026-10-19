@@ -102,3 +102,14 @@ describe("shouldAutoStartSso", () => {
     expect(shouldAutoStartSso(null)).toBe(false);
   });
 });
+
+describe("oidcAuthUrl from a login retry URL", () => {
+  it("carries both invite_token and redirect_to from the location", () => {
+    stubWindow({}, "?sso_error=no_account&invite_token=abc&redirect_to=/x");
+    const params = new URLSearchParams(window.location.search);
+
+    expect(oidcAuthUrl({ redirectTo: params.get("redirect_to"), inviteToken: params.get("invite_token") })).toBe(
+      "/accounts/auth/oidc?redirect_to=%2Fx&invite_token=abc",
+    );
+  });
+});
