@@ -41,6 +41,11 @@ defmodule OperatelyWeb.Endpoint do
     plug Phoenix.Ecto.CheckRepoStatus, otp_app: :operately
   end
 
+  # A proxy that terminates TLS (Traefik) forwards plain http. Take the client's
+  # scheme and port from its headers so request URLs match the public https URL
+  # (the OIDC callback checks its redirect_uri against them). The host is not taken.
+  plug Plug.RewriteOn, [:x_forwarded_proto, :x_forwarded_port]
+
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
   plug OperatelyWeb.Plugs.HttpsRedirect
