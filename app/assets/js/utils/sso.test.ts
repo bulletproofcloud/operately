@@ -61,6 +61,14 @@ describe("ssoErrorMessage", () => {
     expect(ssoErrorMessage(null)).toBeNull();
     expect(ssoErrorMessage("weird")).toBe("Sign-in failed. Please try again.");
   });
+
+  it.each(["__proto__", "constructor", "toString", "hasOwnProperty"])(
+    "falls back to the generic message for inherited property %s",
+    (code) => {
+      stubWindow({});
+      expect(ssoErrorMessage(code)).toBe("Sign-in failed. Please try again.");
+    },
+  );
 });
 
 describe("startSsoLogin", () => {
