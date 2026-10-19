@@ -62,6 +62,7 @@ defmodule Operately.Features.LoginTest do
     ctx
     |> UI.visit("/log_in?sso_error=no_account")
     |> UI.assert_text("No Operately account for this email. Ask an admin for an invite.")
+    |> UI.assert_has(Wallaby.Query.css("[role=alert]", text: "No Operately account for this email. Ask an admin for an invite."))
     |> UI.assert_has(@oidc_sign_in_query)
   end
 end
