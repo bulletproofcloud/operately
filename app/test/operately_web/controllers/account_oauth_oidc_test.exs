@@ -76,6 +76,58 @@ defmodule OperatelyWeb.AccountOauthOidcTest do
     refute Operately.People.get_account_by_email("sneaky@example.localhost")
   end
 
+  describe "error redirects keep the invite context" do
+    defp error_query(conn) do
+      uri = URI.parse(redirected_to(conn))
+      assert uri.path == "/log_in"
+      URI.decode_query(uri.query)
+    end
+
+    defp with_context(conn, session) do
+      Plug.Test.init_test_session(conn, session)
+    end
+
+    test "email_not_verified carries the session invite_token and redirect_to", ctx do
+      account_fixture(%{email: "member@example.localhost"})
+      conn = with_context(ctx.conn, %{oauth_invite_token: "tok-1", oauth_redirect_to: "/c/goals"})
+
+      conn = login(conn, %{"email" => "member@example.localhost", "email_verified" => "false"})
+
+      assert error_query(conn) == %{"sso_error" => "email_not_verified", "invite_token" => "tok-1", "redirect_to" => "/c/goals"}
+      assert String.starts_with?(redirected_to(conn), "/log_in?sso_error=email_not_verified&")
+    end
+
+    test "no_account carries the invite_token param and stored redirect_to", ctx do
+      conn = with_context(ctx.conn, %{oauth_redirect_to: "/c/goals"})
+
+      conn = login(conn, %{"email" => "stranger@example.localhost", "invite_token" => "tok-2"})
+
+      assert error_query(conn) == %{"sso_error" => "no_account", "invite_token" => "tok-2", "redirect_to" => "/c/goals"}
+    end
+
+    test "an unsafe stored redirect_to is not echoed", ctx do
+      conn = with_context(ctx.conn, %{oauth_invite_token: "tok-3", oauth_redirect_to: "//evil.example"})
+
+      conn = login(conn, %{"email" => "stranger@example.localhost"})
+
+      assert error_query(conn) == %{"sso_error" => "no_account", "invite_token" => "tok-3"}
+    end
+
+    test "nothing stored gives exactly the bare error URL", ctx do
+      conn = login(ctx.conn, %{"email" => "stranger@example.localhost"})
+      assert redirected_to(conn) == "/log_in?sso_error=no_account"
+
+      conn = login(ctx.conn, %{"email" => "stranger@example.localhost", "email_verified" => "false"})
+      refute redirected_to(conn) =~ "redirect_to"
+      refute redirected_to(conn) =~ "invite_token"
+    end
+
+    test "an empty invite_token is dropped", ctx do
+      conn = login(ctx.conn, %{"email" => "stranger@example.localhost", "invite_token" => ""})
+      assert redirected_to(conn) == "/log_in?sso_error=no_account"
+    end
+  end
+
   test "request phase when OIDC is not configured redirects with not_configured", ctx do
     Application.put_env(:operately, :allow_login_with_oidc, false)
 
